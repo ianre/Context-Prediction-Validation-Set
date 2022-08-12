@@ -58,8 +58,7 @@ def main():
         print("Available task labels: ", available_labels)
         sys.exit()
     ''' 
-    task = "Suturing"
-    #I = Iterator(task) 
+    task = "Knot_Tying"
     I = Iterator(task)
     I.DrawLabelsContextKin()
     #I.DrawLabelsContext()
@@ -129,6 +128,78 @@ class JSONInterface:
                 cn.append(instance["className"])
         return cn,polylineSeries
 
+
+
+class NPYInterface:
+    def __init__(self, npyLoc):
+        self.grasper_loc = npyLoc
+        self.thread_loc = npyLoc.replace("deeplab_grasper_v1","deeplab_thread_v1")
+        self.needle_loc = npyLoc.replace("deeplab_grasper_v1","deeplab_needle_v1")
+        self.ring_loc = npyLoc.replace("deeplab_grasper_v1","deeplab_ring_v1")
+        #with open(self.npyarr_location) as f:
+        self.grasperData = np.load(self.grasper_loc, allow_pickle=True)
+        print("\t\t\t GrasperData",type(self.grasperData),self.grasperData.shape)
+        self.g1 = self.grasperData[0]
+        self.g2 = self.grasperData[1]
+        print("\t\t\t l1",self.g1.shape,"l2",self.g2.shape)
+        try:
+            self.threadData = np.load(self.thread_loc, allow_pickle=True)
+            print("\t\t\t ThreadData",self.threadData.shape)
+            self.t1 = self.threadData[0]
+            self.t2 = self.threadData[1]
+            print("\t\t\t T1",self.t1.shape,"T2",self.t2.shape)
+        except:
+            pass
+        try:
+            self.needleData = np.load(self.needle_loc,allow_pickle=True) 
+        except:
+            pass
+
+        try:
+            self.ringData = np.load(self.ring_loc,allow_pickle=True)
+        except:
+            pass     
+        self.instances = []
+
+    def getPolygons(self):
+        polygonSeries = list()
+        cn = list()
+        for instance in self.instances:            
+            instance_ID = instance["classId"]
+            instance_type = instance["type"]
+            instance_probability = instance["probability"]
+            instance_class = instance["className"]
+            if(instance_type == "polygon"):                
+                polygonSeries.append(instance["points"])   
+                cn.append(instance["className"])
+        return cn, polygonSeries
+
+    def getKeyPoints(self):
+        keyPoints = list()
+        cn = list()
+        for instance in self.instances:            
+            instance_ID = instance["classId"]
+            instance_type = instance["type"]
+            instance_probability = instance["probability"]
+            instance_class = instance["className"]
+            if(instance_type == "point"):                
+                keyPoints.append([instance['x'], instance['y']])   
+                cn.append(instance["className"])
+        return cn, keyPoints
+
+    def getPolyLines(self):
+        polylineSeries = list()
+        cn = list()
+        for instance in self.instances:            
+            instance_ID = instance["classId"]
+            instance_type = instance["type"]
+            instance_probability = instance["probability"]
+            instance_class = instance["className"]
+            if(instance_type == "polyline"):                
+                polylineSeries.append(instance["points"])    
+                cn.append(instance["className"])
+        return cn,polylineSeries
+
 class MPInterface:
     def __init__(self,MPLoc):
         self.mp_loc = MPLoc
@@ -168,8 +239,8 @@ class Iterator:
     def __init__(self, task):
         self.CWD = os.path.dirname(os.path.realpath(__file__))        
         self.task = task
-        self.imagesDir = os.path.join(self.CWD, task,"images_pre")
-        self.labelsDir = os.path.join(self.CWD, task,"annotations_pre")
+        self.imagesDir = os.path.join(self.CWD, task,"images")
+        self.labelsDir = os.path.join(self.CWD, task,"annotations")
         self.outputDir = os.path.join(self.CWD, task,"labeled_images")
         self.mpDir = os.path.join(self.CWD, task, "motion_primitives_combined")
         
@@ -182,6 +253,7 @@ class Iterator:
         self.kinDir = os.path.join(self.CWD,task,"kinematics")
 
         self.context_output = os.path.join(self.CWD,task,"vis_context_labels")
+        
         self.OS = "windows"
 
     """
@@ -257,6 +329,11 @@ class Iterator:
     def imageToJSON(self, file):
         fileArr = file.split(".")
         return "".join(fileArr[:-1]) + ".json"
+
+    def imageToNPY(self,file):
+        fileArr = file.split(".")
+        temp = "".join(fileArr[:-1]) + ".npy"
+        return temp.replace(".npy","_gt_pred.npy")
 
     def getRBGA(self, hexColor):
         c = ImageColor.getcolor(hexColor, "RGB")        
@@ -554,11 +631,19 @@ class Iterator:
 
     :return: '''     
     #!LG_Info, RG_Info, LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContextKT(imageSource,labelSource,outputDest, MPI, CtxI,CtxI_Pred)
-    def DrawSingleImageContextKT(self, imageSource, labelSource, target, MPI, CtxI,CtxI_Pred, DEBUG=False):       
+    def DrawSingleImageContextKT(self, imageSource, labelSource, predicted_labelSource, target,CtxI,CtxI_Pred, DEBUG=False):       
         J = JSONInterface(labelSource)
+        prednpy = NPYInterface(predicted_labelSource)
+
+        polyNames , polygons = prednpy.getPolygons(); #! graspers only in KT, 
+        kpNames, KeyPoint = prednpy.getKeyPoints(); #! None in KT,
+        polyLineNames, polyLines = prednpy.getPolyLines();
+        
+        '''
         polyNames , polygons = J.getPolygons(); #! graspers only in KT, 
         kpNames, KeyPoint = J.getKeyPoints(); #! None in KT,
         polyLineNames, polyLines = J.getPolyLines();
+        '''
 
         #! we want two sets of Thread annotations: top and bottom
 
@@ -656,7 +741,7 @@ class Iterator:
         except Exception as e: 
             print(e)
             self.DrawTextArr(["Shape Exception" ], draw, font)        
-        #img.save(target) # to save        
+        img.save(target) # to save        
         #! F.L_G_Dist = LG_Info[0] 
         return LG_Thread_Info_Top,RG_Thread_Info_Top, LG_Thread_Info_Bottom,RG_Thread_Info_Bottom #! add LG Bottom, RG Top
     
@@ -678,7 +763,7 @@ class Iterator:
     LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContext(imageSource,labelSource,outputDest, MPI, CtxI,CtxI_Pred)
 
     :return:''' 
-    def DrawSingleImageContext(self, imageSource, labelSource, target, MPI, CtxI,CtxI_Pred, DEBUG=False):       
+    def DrawSingleImageContext(self, imageSource, labelSource,predicted_labelSource, target, CtxI,CtxI_Pred, DEBUG=False):       
         J = JSONInterface(labelSource)
         polyNames , polygons = J.getPolygons(); # graspers only in KT, 
         kpNames, KeyPoint = J.getKeyPoints(); # None in KT,
@@ -1095,13 +1180,14 @@ class Iterator:
                     if "frame" not in file:
                         continue 
 
-                    print("Proc:", task_subject_trial, file+".txt" )
+                    print(">", task_subject_trial, file+".txt" )
                     frameNumber = int(file.replace("frame_","").replace(".txt","").replace(".png",""))
-                    MP_comb = os.path.join(self.mpDir,task_subject_trial+".txt")
+                    #MP_comb = os.path.join(self.mpDir,task_subject_trial+".txt")
                     
 
                     #! turn on for MPs
-                    MPI = MPInterface(MP_comb)
+                    #MPI = MPInterface(MP_comb)
+                    
 
                     Context_comb = os.path.join(self.ContextDir,task_subject_trial+".txt")
                     Pred_Context_comb = os.path.join(self.context_output,task_subject_trial+".txt")
@@ -1112,11 +1198,22 @@ class Iterator:
                     If we replace "images" by "labels" then the image source should be the same as the label source,
                     which is the same as the output destination
                     '''
-                    labelRoot = root.replace("images_pre","annotations_pre")
-                    outputRoot = root.replace("images_pre","labeled_images")
+                    labelRoot = root.replace("images","annotations")
+                    predictedMaskRoot = root.replace("images","deeplab_grasper_v1")
+                    outputRoot = root.replace("images","labeled_images")
                     imageSource = os.path.join(trialImageDir, file)
                     labelSource = os.path.join(labelRoot, self.imageToJSON(file))
+                    predictedMask = os.path.join(predictedMaskRoot, self.imageToNPY(file))
                     outputDest = os.path.join(outputRoot, file)
+
+                    #! PredictedMaskInterface
+                    prednpy = NPYInterface(predictedMask)
+
+                    polyNames , polygons = prednpy.getPolygons(); #! graspers only in KT, 
+                    kpNames, KeyPoint = prednpy.getKeyPoints(); #! None in KT,
+                    polyLineNames, polyLines = prednpy.getPolyLines();
+                    continue
+
                     if(not os.path.isdir(outputRoot)):
                         path = pathlib.Path(outputRoot)
                         path.mkdir(parents=True, exist_ok=True)
@@ -1129,11 +1226,11 @@ class Iterator:
                         if("Knot" in self.task):
                             #self.DrawSingleImageKT(imageSource,labelSource,outputDest)
                             #! LG_Thread_Info, RG_Thread_Info contains intersections between graspers and the nearest thread top or bottom (combined left and right)
-                            LG_Thread_Info_Top,RG_Thread_Info_Top, LG_Thread_Info_Bottom,RG_Thread_Info_Bottom = self.DrawSingleImageContextKT(imageSource,labelSource,outputDest, MPI, CtxI,CtxI_Pred)
+                            LG_Thread_Info_Top,RG_Thread_Info_Top, LG_Thread_Info_Bottom,RG_Thread_Info_Bottom = self.DrawSingleImageContextKT(imageSource,labelSource,predictedMask,outputDest, CtxI,CtxI_Pred)
                             
                         else:
                             #! LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info
-                            LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContext(imageSource,labelSource,outputDest, MPI, CtxI,CtxI_Pred)
+                            LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContext(imageSource,labelSource,predictedMask,outputDest, CtxI,CtxI_Pred)
 
                     #! LG_Info[1] for intersection with needle
                     #! frameNumber, L_Gripper_Angle, R_Gripper_Angle
