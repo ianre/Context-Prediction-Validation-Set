@@ -65,8 +65,8 @@ class Iterator:
                     path = pathlib.Path(outputRoot)
                     path.mkdir(parents=True, exist_ok=True)
 
-                (x_p,y_p), inter = self.getIntersection(npySource, threadSource ,outputDest,imageSource)
-                print((x_p,y_p), inter)
+                (x_p,y_p), (i,j), inter = self.savePredLite(npySource, threadSource ,outputDest,imageSource)
+                print((x_p,y_p), (i,j), inter)
                 #if(not os.path.isdir(outputRoot)):
                 #    path = pathlib.Path(outputRoot)
                 #    path.mkdir(parents=True, exist_ok=True)
@@ -123,11 +123,13 @@ class Iterator:
         #x_center, y_center= xis.mean(), yis.mean()
 
         #ax.Circle((center_x,center_y),radius=50,color='red') 
+        inter, (i,j)  = self.isIntersecting2(grasper,thread)
+        print(inter)
+
         drawObject = plt.Circle((y_center,x_center),radius=10,color='red', fill=True)
         ax.add_patch(drawObject)
-
-        inter = self.isIntersecting2(grasper,thread)
-        print(inter)
+        drawObject2 = plt.Circle((j,i),radius=10,color='green', fill=True)
+        ax.add_patch(drawObject2)
         #inter_s = ', '.join(['%.2f']*len(inter))
         #print(inters)
         inter_msg = ""
@@ -139,6 +141,7 @@ class Iterator:
         #plt.imshow(gt.numpy(), cmap='hot', alpha=0.2,interpolation=None)
         fig.savefig(outputMask) 
         plt.close(fig)
+        return (y_center,x_center),(j,i), inter
 
     def isIntersecting2(self,maskA,maskB):
         rows = len(maskA)
@@ -146,8 +149,8 @@ class Iterator:
         for i in range(rows):
             for j in range(cols):
                 if(maskA[i][j] == 1 and maskB[i][j] == 1):
-                    return True
-        return False
+                    return True, (i,j)
+        return False, (0,0)
 
     def isIntersecting(self, maskA, maskB):
         return np.intersect1d(maskA,maskB)

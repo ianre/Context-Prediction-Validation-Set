@@ -84,7 +84,7 @@ class Iterator:
         self.outputDir = os.path.join(self.CWD, self.task,"ctx_output")
         self.ian = os.path.join(self.CWD,self.task, "ctx_ian")
         self.kay = os.path.join(self.CWD,self.task, "ctx_kay")
-        self.pred = os.path.join(self.CWD, self.task,"vis_context_labels")
+        self.pred = os.path.join(self.CWD, self.task,"vis_context_labels_deeplab")
         self.consensus = os.path.join(self.CWD, self.task,"ctx_consensus")    
         self.surgeon =      os.path.join(self.CWD, self.task,"ctx_surgeon")    
         self.alpha = os.path.join(self.CWD, self.task,"k_alpha")
@@ -202,7 +202,7 @@ class Iterator:
         count = 0
         intersections = []
         IOU_frame = []
-        for root, dirs, files in os.walk(self.surgeon): # self.surgeon
+        for root, dirs, files in os.walk(self.consensus): # self.surgeon
             for file in files:
                 if("99"  in file):
                     continue
@@ -217,7 +217,7 @@ class Iterator:
                 '''
                 
                 #! IOU Automated vs Consensus
-                pred_file = os.path.join(self.surgeon, file)
+                pred_file = os.path.join(self.pred, file)
                 consensus_file = os.path.join(self.consensus, file)
 
 

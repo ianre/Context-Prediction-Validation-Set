@@ -19,6 +19,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import LineString
 from dataclasses import dataclass
 from itertools import accumulate
+from scipy import ndimage
 
 global MAX_LEN
 MAX_LEN = 200
@@ -128,7 +129,33 @@ class JSONInterface:
                 cn.append(instance["className"])
         return cn,polylineSeries
 
+class NPYInterface2:
+    def __init__(self):
+        pass
 
+    def getIntersection(self, grasperSource,threadSource, outputMask):
+        [grasper_gt,grasper] = np.load(grasperSource,allow_pickle=True)
+        [thread_gt,thread] = np.load(threadSource,allow_pickle=True)
+        grasper[grasper>0.95]=1 #! instead of 0.97
+        grasper[grasper<0.95]=0 #! instead of 0.97
+        thread[thread>0.95]=1 
+        thread[thread<0.95]=0 
+        grasper = np.squeeze(grasper)
+        thread = np.squeeze(thread)
+        (x_center, y_center) = ndimage.center_of_mass(grasper)
+        #drawObject = plt.Circle((y_center,x_center),radius=10,color='red', fill=True)
+        inter = self.isIntersecting(grasper,thread)
+        print(inter)
+        return (y_center,x_center), inter
+
+    def isIntersecting(self,maskA,maskB):
+        rows = len(maskA)
+        cols = len(maskA[0])
+        for i in range(rows):
+            for j in range(cols):
+                if(maskA[i][j] == 1 and maskB[i][j] == 1):
+                    return True
+        return False
 
 class NPYInterface:
     def __init__(self, npyLoc):
