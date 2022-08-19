@@ -59,7 +59,7 @@ def main():
         print("Available task labels: ", available_labels)
         sys.exit()
     ''' 
-    task = "Knot_Tying"
+    task = "Needle_Passing"
     I = Iterator(task)
     I.DrawLabelsContextKin()
     #I.DrawLabelsContext()
@@ -157,7 +157,6 @@ class NPYInterface2:
                     return True, (i,j)
         return False, (0,0)
 
-
 class NPYInterface:
     def __init__(self, npyLoc):
         self.grasper_loc = npyLoc
@@ -244,7 +243,9 @@ class MPInterface:
                 return " ".join(l_s)
 
 class ContextInterface:
-    def __init__(self, ContextLoc):
+    def __init__(self, ContextLoc,enable):
+        if(enable):
+            return
         self.c_loc = ContextLoc
         self.transcript = []
         with open(self.c_loc) as file:
@@ -280,7 +281,7 @@ class Iterator:
 
         self.kinDir = os.path.join(self.CWD,task,"kinematics")
 
-        self.context_output = os.path.join(self.CWD,task,"vis_context_labels_deeplab")
+        self.context_output = os.path.join(self.CWD,task,"vis_context_labels_deeplab_v1")
         
         self.OS = "windows"
 
@@ -671,15 +672,12 @@ class Iterator:
             if(i>x_p):
                 RG_inter_t = True
             else:
-                LG_inter_t=True
-                
-                
+                LG_inter_t=True  
         
         LG_Message = ""
         RG_Message = ""
         LG_Thread_Message = ""
         RG_Thread_Message = ""
-
         N_Message = ""
         Lens_Message = ""
         #! if N internsection is 3, there is no intersection
@@ -687,7 +685,6 @@ class Iterator:
         #LG_Thread_Info_Bottom, RG_Thread_Info_Bottom = self.CalcDistancesSingleThread(LGX, LGY, RGX, RGY, SingleThreadXBottom, SingleThreadYBottom)
         LG_Thread_Info_Top, RG_Thread_Info_Top = [1,LG_inter_t],[1,RG_inter_t]
         LG_Thread_Info_Bottom, RG_Thread_Info_Bottom = [1,LG_inter_t],[1,RG_inter_t]
-
         if(not LG_Thread_Info_Top[1] and LG_Thread_Info_Bottom[1] and not RG_Thread_Info_Top[1] and not RG_Thread_Info_Bottom[1]):
             print("stop here")
         try:
@@ -701,15 +698,118 @@ class Iterator:
                 RG_Message = "No Annotation for Right Grasper"
             else:
                 RG_Message =  "\nR To Top Thread:   " + '{0:.2f}'.format(RG_Thread_Info_Top[0])  + " Inters:" + str(RG_Thread_Info_Top[1])
-                RG_Message += "\nR To Bottom Thread:" + '{0:.2f}'.format(RG_Thread_Info_Bottom[0])  + " Inters:" + str(RG_Thread_Info_Bottom[1])
-            
-
+                RG_Message += "\nR To Bottom Thread:" + '{0:.2f}'.format(RG_Thread_Info_Bottom[0])  + " Inters:" + str(RG_Thread_Info_Bottom[1])            
         except Exception as e: 
-            print(e)
-
-        
+            print(e)        
         return LG_Thread_Info_Top,RG_Thread_Info_Top, LG_Thread_Info_Bottom,RG_Thread_Info_Bottom #! add LG Bottom, RG Top
+
+    def DrawSingleImageContextNP(self, grasperMask,threadMask,needleMask,ringMask,outputDest, CtxI,CtxI_Pred):
+        #J = JSONInterface(labelSource)
+        prednpyG_T = NPYInterface2()
+        prednpyG_N = NPYInterface2()
+        prednpyG_R = NPYInterface2()
+        prednpyR_N = NPYInterface2()
+        (x_p_T,y_p_T), (i_T,j_T), inter_T = prednpyG_T.getIntersection(grasperMask, threadMask) # (center), (intersection), boolean
+        (x_p_N,y_p_N), (i_N,j_N), inter_N = prednpyG_N.getIntersection(grasperMask, needleMask) 
+        (x_p_R,y_p_R), (i_R,j_R), inter_R = prednpyG_R.getIntersection(grasperMask, ringMask) 
+        (x_p_R_N,y_p_R_N), (i_R_N,j_R_N), inter_R_N = prednpyR_N.getIntersection(needleMask, ringMask) 
+        print((x_p_T,y_p_T), inter_T)
+
+        LG_inter_T = False
+        RG_inter_T = False
+        if(inter_T):
+            if(i_T>x_p_T):
+                RG_inter_T = True
+            else:
+                LG_inter_T=True  
+
+        LG_inter_N = False
+        RG_inter_N = False
+        if(inter_N):
+            if(i_N>x_p_N):
+                RG_inter_N = True
+            else:
+                LG_inter_N=True  
+        
+        LG_inter_R = False
+        RG_inter_R = False
+        if(inter_R):
+            if(i_R>x_p_R):
+                RG_inter_R = True
+            else:
+                LG_inter_R=True          
+        
+        '''
+        LG_Message = ""
+        RG_Message = ""
+        LG_Thread_Message = ""
+        RG_Thread_Message = ""
+        N_Message = ""
+        Lens_Message = ""
+        '''
+
+        #SingleThreadX, SingleThreadY = "_", "_"
+        #LGX,LGY,RGX,RGY,NX,NY,RingsX,RingsY = self.OrganizePoints(polygons,polyNames)
+        #LG_Info, RG_Info, N_Info, N_Intersection, Needle_Ring_Distances = self.CalcDistances(LGX,LGY,RGX,RGY,NX,NY,RingsX,RingsY) 
+        
+        #LG_Thread_Info = [1,LG_inter_T]
+        #RG_Thread_Info = [1,RG_inter_T]
+        #if(not LG_Thread_Info_Top[1] and LG_Thread_Info_Bottom[1] and not RG_Thread_Info_Top[1] and not RG_Thread_Info_Bottom[1]):
+        #    print("stop here")
+        return LG_inter_T,RG_inter_T,LG_inter_N,RG_inter_N,LG_inter_R,RG_inter_R,inter_R_N
+        '''
+        try:
+            if(len(LGX) == 0 or len(LGY) == 0):
+                LG_Message = "No Annotation for Left Grasper"
+            else:
+                LG_Message = "L To Needle:" + '{0:.2f}'.format(LG_Info[0])  + " Inters:" + str(LG_Info[1])
+            if(len(RGX) == 0 or len(RGY) == 0):
+                RG_Message = "No Annotation for Right Grasper"
+            else:
+                RG_Message = "R To Needle:" + '{0:.2f}'.format(RG_Info[0])  + " Inters:" + str(RG_Info[1])
+            
+            if(len(NX) == 0 or len(NY) == 0):
+                N_Message = "No annotation for Needle Or Rings"
+            else:
+                #N_Message = '{0:.2f}'.format(N_Info[0]) + " : " + '{0:.2f}'.format(N_Info[1]) 
+                N_Message = N_Info[0] + " : " + N_Info[1]
+
+            if(len(LGX) == 0 or len(LGY) == 0 or len(SingleThreadX) == 0):
+                LG_Thread_Message = "No Annotation for L_G_Thread"
+            else:
+                LG_Thread_Message = "L To Thread:" + '{0:.2f}'.format(LG_Thread_Info[0])  + " Inters:" + str(LG_Thread_Info[1])
+
+            if(len(RGX) == 0 or len(RGY) == 0 or len(SingleThreadX) == 0):
+                RG_Thread_Message = "No Annotation for R_G_Thread"
+            else:
+                RG_Thread_Message = "R To Thread:" + '{0:.2f}'.format(RG_Thread_Info[0])  + " Inters:" + str(RG_Thread_Info[1])           
+        except Exception as e: 
+            print(e)  
+                  
+        return LG_Info, RG_Info, N_Intersection, Ring_Intersection,LG_Thread_Info, RG_Thread_Info
+        '''
     
+    def DrawSingleImageContextS(self, grasperMask,threadMask,needleMask,outputDest, CtxI,CtxI_Pred):
+        prednpyG_T = NPYInterface2()
+        prednpyG_N = NPYInterface2()
+        (x_p_T,y_p_T), (i_T,j_T), inter_T = prednpyG_T.getIntersection(grasperMask, threadMask) # (center), (intersection), boolean
+        (x_p_N,y_p_N), (i_N,j_N), inter_N = prednpyG_N.getIntersection(grasperMask, needleMask) 
+        #print((x_p_T,y_p_T), inter_T)
+        LG_inter_T = False
+        RG_inter_T = False
+        if(inter_T):
+            if(i_T>x_p_T):
+                RG_inter_T = True
+            else:
+                LG_inter_T=True  
+        LG_inter_N = False
+        RG_inter_N = False
+        if(inter_N):
+            if(i_N>x_p_N):
+                RG_inter_N = True
+            else:
+                LG_inter_N=True  
+        return LG_inter_T,RG_inter_T,LG_inter_N,RG_inter_N
     
     ''' Iterator: DrawSingleImageContext(imageSource,imageSource, labelSource, target, MPI, CtxI,CtxI_Pred, DEBUG=False)
 
@@ -1147,17 +1247,14 @@ class Iterator:
 
                     print(">", task_subject_trial, file+".txt" )
                     frameNumber = int(file.replace("frame_","").replace(".txt","").replace(".png",""))
-                    #MP_comb = os.path.join(self.mpDir,task_subject_trial+".txt")
-                    
+                    #MP_comb = os.path.join(self.mpDir,task_subject_trial+".txt")                   
 
                     #! turn on for MPs
                     #MPI = MPInterface(MP_comb)
-                    
-
                     Context_comb = os.path.join(self.ContextDir,task_subject_trial+".txt")
                     Pred_Context_comb = os.path.join(self.context_output,task_subject_trial+".txt")
-                    CtxI = ContextInterface(Context_comb)
-                    CtxI_Pred = ContextInterface(Pred_Context_comb)
+                    CtxI = ContextInterface(Pred_Context_comb,False)
+                    CtxI_Pred = ContextInterface(Pred_Context_comb,False)
 
                     '''
                     If we replace "images" by "labels" then the image source should be the same as the label source,
@@ -1166,14 +1263,18 @@ class Iterator:
                     labelRoot = root.replace("images","annotations")
                     grasperRoot = root.replace("images","deeplab_grasper_v1")
                     threadRoot = root.replace("images","deeplab_thread_v1")
+                    ringRoot = root.replace("images","deeplab_rings_v1")
+                    needleRoot = root.replace("images","deeplab_needle_v1")
                     outputRoot = root.replace("images","labeled_images")
+
                     imageSource = os.path.join(trialImageDir, file)
                     labelSource = os.path.join(labelRoot, self.imageToJSON(file))
                     grasperMask = os.path.join(grasperRoot, self.imageToNPY(file))
                     threadMask = os.path.join(threadRoot, self.imageToNPY(file))
+                    ringMask = os.path.join(ringRoot,self.imageToNPY(file))
+                    needleMask = os.path.join(needleRoot,self.imageToNPY(file))
+                    
                     outputDest = os.path.join(outputRoot, file)
-
-                
 
                     if(not os.path.isdir(outputRoot)):
                         path = pathlib.Path(outputRoot)
@@ -1190,19 +1291,20 @@ class Iterator:
                             #self, grasperSource, ThreadSource, target,CtxI,CtxI_Pred, DEBUG=False
                             LG_Thread_Info_Top,RG_Thread_Info_Top, LG_Thread_Info_Bottom,RG_Thread_Info_Bottom = self.DrawSingleImageContextKT(grasperMask,threadMask,outputDest, CtxI,CtxI_Pred)
                             
-                        else:
+                        elif("Needle" in self.task):
                             #! LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info
-                            LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContext(imageSource,labelSource,predictedMask,outputDest, CtxI,CtxI_Pred)
-
+                            #LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContextNP(grasperMask,threadMask,needleMask,ringMask,outputDest, CtxI,CtxI_Pred)
+                            LG_inter_T,RG_inter_T,LG_inter_N,RG_inter_N,LG_inter_R,RG_inter_R,Ring_Needle_inter =  self.DrawSingleImageContextNP(grasperMask,threadMask,needleMask,ringMask,outputDest, CtxI,CtxI_Pred)
+                        else:
+                            #LG_Info, RG_Info, N_Intersection, Needle_Ring_Distances,LG_Thread_Info, RG_Thread_Info = self.DrawSingleImageContextS(grasperMask,threadMask,needleMask,outputDest, CtxI,CtxI_Pred)
+                            LG_inter_T,RG_inter_T,LG_inter_N,RG_inter_N = self.DrawSingleImageContextS(grasperMask,threadMask,needleMask,outputDest, CtxI,CtxI_Pred)
                     #! LG_Info[1] for intersection with needle
                     #! frameNumber, L_Gripper_Angle, R_Gripper_Angle
-
                     # we can then use the object Frame to determine the context
                     # Contact/Hold Context:
                     # "Nothing", "Ball/Block/Sleeve", "Needle", "Thread", "Fabric/Tissue", "Ring", "Other"
-                    #           0                   1         2         3               4       5       6
-                   
-                    if("Needle" in self.task or "Suturing" in self.task):
+                    #           0                   1         2         3               4       5       6                   
+                    if("Needle" in self.task):
                         # Needle State in Suturing:
                         # "Not Touching", "Touching", "In"
                         #               0       1       2
@@ -1217,26 +1319,88 @@ class Iterator:
                         L_G_Hold = 0
                         R_G_Touch = 0
                         R_G_Hold = 0
-                        if(LG_Info[1] and L_Gripping):
-                            L_G_Touch = 0
-                            L_G_Hold = 2
-                        elif(LG_Info[1] and not L_Gripping):
-                            L_G_Touch = 2
-                            L_G_Hold = 0 
-                        if(RG_Info[1] and R_Gripping):
-                            R_G_Touch = 0
-                            R_G_Hold = 2
-                        elif(RG_Info[1] and not R_Gripping):
-                            R_G_Touch = 2
-                            R_G_Hold = 0 
+                        # Thread = 3 
+                        if(LG_inter_T):
+                            if(L_Gripping):
+                                L_G_Hold = 3
+                            else:
+                                L_G_Touch = 3
+                        if(RG_inter_T):
+                            if(R_Gripping):
+                                R_G_Hold = 3
+                            else:
+                                R_G_Touch = 3
+
+                        # Ring = 5
+                        if(LG_inter_R):
+                            if(L_Gripping):
+                                L_G_Touch = 5
+                            else:
+                                L_G_Hold = 5
+                        if(RG_inter_R):
+                            if(R_Gripping):
+                                R_G_Touch = 0
+                            else:
+                                R_G_Hold = 3
+
+                        # Needle = 2 
+                        if(LG_inter_N):
+                            if(L_Gripping):
+                                L_G_Hold = 2
+                                L_G_Touch = 0
+                            else:
+                                L_G_Hold = 0
+                                L_G_Touch = 2
+                        if(RG_inter_N):
+                            if(R_Gripping):
+                                R_G_Hold = 2
+                                R_G_Touch = 0
+                            else:
+                                R_G_Hold = 0
+                                R_G_Touch = 2
+
                         Extra_State = 0
                         if("Needle" in self.task):
-                            if(N_Intersection != 3):
+                            if(Ring_Needle_inter):
                                 Extra_State = 2
                             else:
-                                Extra_State = 0                    
+                                Extra_State = 0
                         context.append(str(frameNumber) + " " + str(L_G_Hold) + " " + str( L_G_Touch) + " " + str(R_G_Hold) + " " + str(R_G_Touch) + " " + str(Extra_State))
-
+                    elif("Suturing" in self.task):
+                        L_Gripping,R_Gripping = self.isGripperClosed(frameNumber,trialKin_L,trialKin_R)                    
+                        L_G_Touch = 0
+                        L_G_Hold = 0
+                        R_G_Touch = 0
+                        R_G_Hold = 0
+                        # Thread = 3 
+                        if(LG_inter_T):
+                            if(L_Gripping):
+                                L_G_Hold = 3
+                            else:
+                                L_G_Touch = 3
+                        if(RG_inter_T):
+                            if(R_Gripping):
+                                R_G_Hold = 3
+                            else:
+                                R_G_Touch = 3
+                       
+                        # Needle = 2 
+                        if(LG_inter_N):
+                            if(L_Gripping):
+                                L_G_Hold = 2
+                                L_G_Touch = 0
+                            else:
+                                L_G_Hold = 0
+                                L_G_Touch = 2
+                        if(RG_inter_N):
+                            if(R_Gripping):
+                                R_G_Hold = 2
+                                R_G_Touch = 0
+                            else:
+                                R_G_Hold = 0
+                                R_G_Touch = 2
+                        Extra_State = 0
+                        context.append(str(frameNumber) + " " + str(L_G_Hold) + " " + str( L_G_Touch) + " " + str(R_G_Hold) + " " + str(R_G_Touch) + " " + str(Extra_State))
                     else: #! Knot Tying                        
                         # Knot States in Knot Tying:
                         #"N/A", "Thread Wrapped", "Loose", "Tight"
