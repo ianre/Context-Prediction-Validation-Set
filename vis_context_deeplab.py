@@ -133,6 +133,21 @@ class NPYInterface2:
     def __init__(self):
         pass
 
+    def getIntersection_cached(self, grasper_gt,grasper,threadSource):
+        [grasper_gt,grasper] = grasper_gt,grasper
+        [thread_gt,thread] = np.load(threadSource,allow_pickle=True)
+        grasper[grasper>0.95]=1 #! instead of 0.97
+        grasper[grasper<0.95]=0 #! instead of 0.97
+        thread[thread>0.95]=1 
+        thread[thread<0.95]=0 
+        grasper = np.squeeze(grasper)
+        thread = np.squeeze(thread)
+        (x_center, y_center) = ndimage.center_of_mass(grasper)
+        #drawObject = plt.Circle((y_center,x_center),radius=10,color='red', fill=True)
+        inter, (i,j) = self.isIntersecting(grasper,thread)
+        #print(inter)
+        return (y_center,x_center), (i,j), inter
+
     def getIntersection(self, grasperSource,threadSource):
         [grasper_gt,grasper] = np.load(grasperSource,allow_pickle=True)
         [thread_gt,thread] = np.load(threadSource,allow_pickle=True)
@@ -145,7 +160,7 @@ class NPYInterface2:
         (x_center, y_center) = ndimage.center_of_mass(grasper)
         #drawObject = plt.Circle((y_center,x_center),radius=10,color='red', fill=True)
         inter, (i,j) = self.isIntersecting(grasper,thread)
-        print(inter)
+        #print(inter)
         return (y_center,x_center), (i,j), inter
 
     def isIntersecting(self,maskA,maskB):
@@ -709,11 +724,12 @@ class Iterator:
         prednpyG_N = NPYInterface2()
         prednpyG_R = NPYInterface2()
         prednpyR_N = NPYInterface2()
-        (x_p_T,y_p_T), (i_T,j_T), inter_T = prednpyG_T.getIntersection(grasperMask, threadMask) # (center), (intersection), boolean
-        (x_p_N,y_p_N), (i_N,j_N), inter_N = prednpyG_N.getIntersection(grasperMask, needleMask) 
-        (x_p_R,y_p_R), (i_R,j_R), inter_R = prednpyG_R.getIntersection(grasperMask, ringMask) 
+        [grasper_gt,grasper] = np.load(grasperMask,allow_pickle=True)
+        (x_p_T,y_p_T), (i_T,j_T), inter_T = prednpyG_T.getIntersection_cached(grasper_gt,grasper, threadMask) # (center), (intersection), boolean
+        (x_p_N,y_p_N), (i_N,j_N), inter_N = prednpyG_N.getIntersection_cached(grasper_gt,grasper, needleMask) 
+        (x_p_R,y_p_R), (i_R,j_R), inter_R = prednpyG_R.getIntersection_cached(grasper_gt,grasper, ringMask) 
         (x_p_R_N,y_p_R_N), (i_R_N,j_R_N), inter_R_N = prednpyR_N.getIntersection(needleMask, ringMask) 
-        print((x_p_T,y_p_T), inter_T)
+        #print((x_p_T,y_p_T), inter_T)
 
         LG_inter_T = False
         RG_inter_T = False
@@ -1428,8 +1444,8 @@ class Iterator:
                         context.append(str(frameNumber) + " " + str(L_G_Hold) + " " + str( L_G_Touch) + " " + str(R_G_Hold) + " " + str(R_G_Touch) + " " + str(Extra_State))
                         #print("\t",str(frameNumber) + " " + str(L_G_Hold) + " " + str( L_G_Touch) + " " + str(R_G_Hold) + " " + str(R_G_Touch) + " " + str(Extra_State),"\n")  
                     count += 1
-
-            self.save(ctxOutput,context)
+            if(len(context) > 2):
+                self.save(ctxOutput,context)
             print(count,"images processed!")
 
     def GenerateContextLine(self,L_G_Touch,L_G_Hold,R_G_Touch,R_G_Hold,L_Gripping,R_Gripping,N_Intersection,frameNumber):
